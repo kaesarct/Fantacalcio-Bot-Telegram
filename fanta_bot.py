@@ -8,10 +8,10 @@ from telegram.ext import (
     CommandHandler,
     CallbackContext,
     MessageHandler,
+    ContextTypes,
     filters,
 )
 from bs4 import BeautifulSoup
-
 
 
 def nextmatch() -> str:
@@ -74,18 +74,20 @@ async def handle_nextmatch(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 async def handle_help(update: Update, context: CallbackContext) -> None:
     if not await is_admin(update, context):
         help_text = (
-            "Benvenuto! Ecco i comandi disponibili:\n\n"
+            "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
             "/nextmatch - Mostra le prossime partite della Serie A.\n"
             "/help - Mostra questo messaggio di aiuto."
         )
     else:
         help_text = (
-            "Benvenuto! Ecco i comandi disponibili:\n\n"
+            "Benvenuto! Ecco i comandi disponibili per l'admin:\n\n"
             "/nextmatch - Mostra le prossime partite della Serie A.\n"
             "/help - Mostra questo messaggio di aiuto."
         )
 
     await update.message.reply_text(help_text)
+
+
 async def is_admin(update: Update, context: CallbackContext) -> bool:
     chat_id = update.message.chat_id
     user_id = update.message.from_user.id
