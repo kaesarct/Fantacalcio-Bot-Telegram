@@ -3,10 +3,15 @@ import os
 from datetime import datetime
 from const import Team, day_of_week_map
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    CallbackContext,
+    MessageHandler,
+    filters,
+)
 from bs4 import BeautifulSoup
 
-TOKEN = os.environ["TOKEN"]
 
 
 def nextmatch() -> str:
@@ -66,11 +71,40 @@ async def handle_nextmatch(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await update.message.reply_text(match_info)
 
 
-if __name__ == "__main__":
+async def handle_help(update: Update, context: CallbackContext) -> None:
+    if not await is_admin(update, context):
+        help_text = (
+            "Benvenuto! Ecco i comandi disponibili:\n\n"
+            "/nextmatch - Mostra le prossime partite della Serie A.\n"
+            "/help - Mostra questo messaggio di aiuto."
+        )
+    else:
+        help_text = (
+            "Benvenuto! Ecco i comandi disponibili:\n\n"
+            "/nextmatch - Mostra le prossime partite della Serie A.\n"
+            "/help - Mostra questo messaggio di aiuto."
+        )
+
+    await update.message.reply_text(help_text)
+async def is_admin(update: Update, context: CallbackContext) -> bool:
+    chat_id = update.message.chat_id
+    user_id = update.message.from_user.id
+
+    chat_administrators = await context.bot.get_chat_administrators(chat_id)
+    return any(admin.user.id == user_id for admin in chat_administrators)
+
+
+def main():
+    TOKEN = os.environ["TOKEN"]
     app = ApplicationBuilder().token(TOKEN).build()
 
-    # Aggiungi il comando /nextmatch
+    # Aggiungi i comandi
     app.add_handler(CommandHandler("nextmatch", handle_nextmatch))
+    app.add_handler(CommandHandler("help", handle_help))
 
     print("Il bot è in esecuzione...")
     app.run_polling()
+
+
+if __name__ == "__main__":
+    main()
