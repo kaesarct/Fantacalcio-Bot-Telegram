@@ -1,32 +1,27 @@
 import logging
 import os
 
-# Crea una cartella per i log localmente se non esiste (sul filesystem del container)
-if not os.path.exists("logs"):
-    os.makedirs("logs")
+# Configurazione del logging
+LOG_FILE = "logs/bot.log"
+os.makedirs(
+    os.path.dirname(LOG_FILE), exist_ok=True
+)  # Assicurati che la directory esista
 
-# Configura il logger
-logger = logging.getLogger("telegram_bot")
-logger.setLevel(
-    logging.DEBUG
-)  # Livello di logging (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+if os.getenv("LOG") == "DEBUG":
+    level = logging.DEBUG
+else:
+    level = logging.INFO
 
-# Crea un gestore per il file di log
-file_handler = logging.FileHandler("logs/bot.log")
-file_handler.setLevel(logging.DEBUG)
+logging.basicConfig(
+    level=level,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[
+        logging.StreamHandler(),  # Log sulla console
+        logging.FileHandler(LOG_FILE),  # Log nel file
+    ],
+)
 
-# Crea un gestore per la console (opzionale)
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Definisci il formato dei log
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-file_handler.setFormatter(formatter)
-console_handler.setFormatter(formatter)
-
-# Aggiungi i gestori al logger
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
-
-# Esempio di log di base (per test)
-logger.info("Logger configurato correttamente.")
+# Esempio di utilizzo del logger
+logger.info("Logger configurato e pronto all'uso.")

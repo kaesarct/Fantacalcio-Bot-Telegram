@@ -1,6 +1,10 @@
 import os
 from peewee import PostgresqlDatabase, Model, BigIntegerField, TextField, TimestampField
 from datetime import datetime
+import logging
+
+# Configura il logger
+from logger import logger
 
 # Leggi i dati del database dalle variabili d'ambiente
 DB_HOST = os.getenv("DB_HOST")
@@ -25,6 +29,13 @@ class Message(Model):
         database = db
 
 
-# Crea le tabelle (se non esistono)
-db.connect()
-db.create_tables([Message])
+def initialize_database():
+    try:
+        db.connect()
+        logger.info("Database connected.")
+        db.create_tables([Message], safe=True)
+        logger.info("Database tables created.")
+    except Exception as e:
+        logger.error(f"An error occurred while initializing the database: {e}")
+    finally:
+        db.close()

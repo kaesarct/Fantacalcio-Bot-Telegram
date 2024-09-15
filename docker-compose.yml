@@ -3,31 +3,25 @@ services:
   bot:
     build: .
     container_name: telegram_bot
-    environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=bot_user
-      - DB_PASSWORD=bot_password
-      - DB_NAME=bot_db
-      - BOT_TOKEN=YOUR_BOT_TOKEN
+    env_file:
+      - .env
     depends_on:
       - db
     volumes:
       - .:/app
       - ./logs:/app/logs  # Volume per mappare i log locali
-    restart: always
+    restart: always  # Riavvia sempre il servizio
 
   db:
     image: postgres:13
     container_name: telegram_bot_db
-    environment:
-      POSTGRES_USER: bot_user
-      POSTGRES_PASSWORD: bot_password
-      POSTGRES_DB: bot_db
+    env_file:
+      - .env
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    restart: always  # Riavvia sempre il servizio
 
 volumes:
   db_data:

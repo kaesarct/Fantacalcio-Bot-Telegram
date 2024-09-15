@@ -1,5 +1,5 @@
 # Usa l'immagine Python ufficiale
-FROM python:3.12-slim
+FROM python:3.12
 
 # Installa le dipendenze necessarie per psycopg2 e PostgreSQL
 RUN apt-get update && apt-get install -y libpq-dev gcc
