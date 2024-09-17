@@ -12,6 +12,13 @@ from logger import logger
 from db_connection import initialize_database
 from seriea_function import nextmatch
 
+try:
+    # Carica comandi dinamici da funny.json
+    with open("funny.json", "r") as f:
+        FUNNY_COMMANDS = json.load(f)
+except FileNotFoundError:
+    FUNNY_COMMANDS = {}
+
 
 # Funzione per configurare i comandi del bot
 async def set_commands(application):
@@ -19,11 +26,6 @@ async def set_commands(application):
         BotCommand("nextmatch", "Mostra le prossime partite della Serie A"),
         BotCommand("help", "Mostra i comandi disponibili"),
     ]
-    # Aggiungi i comandi dal file funny.json
-    with open("funny.json", "r") as f:
-        funny_commands = json.load(f)
-        for command in funny_commands.keys():
-            commands.append(BotCommand(command, f"Risponde con {command}"))
 
     await application.bot.set_my_commands(commands)
 
@@ -93,15 +95,13 @@ async def is_admin(update: Update, context: CallbackContext) -> bool:
 # Funzione per gestire i comandi dinamici
 async def handle_funny_command(update: Update, context: CallbackContext) -> None:
     command = update.message.text.lstrip("/").split()[0]  # Ottieni il comando senza "/"
-    with open("funny.json", "r") as f:
-        funny_commands = json.load(f)
-        if command in funny_commands:
-            response = funny_commands[command]
-            await update.message.reply_text(response)
-            logger.info(f"Comando '{command}' eseguito con successo.")
-        else:
-            await update.message.reply_text("Comando non riconosciuto.")
-            logger.warning(f"Comando '{command}' non trovato in funny.json.")
+    if command in FUNNY_COMMANDS:
+        response = FUNNY_COMMANDS[command]
+        await update.message.reply_text(response)
+        logger.info(f"Comando '{command}' eseguito con successo.")
+    else:
+        await update.message.reply_text("Comando non riconosciuto.")
+        logger.warning(f"Comando '{command}' non trovato in funny.json.")
 
 
 def main():
