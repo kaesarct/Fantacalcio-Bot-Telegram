@@ -1,3 +1,4 @@
+import json
 import os
 from telegram import BotCommand, Update
 from telegram.ext import (
@@ -18,6 +19,12 @@ async def set_commands(application):
         BotCommand("nextmatch", "Mostra le prossime partite della Serie A"),
         BotCommand("help", "Mostra i comandi disponibili"),
     ]
+    # Aggiungi i comandi dal file funny.json
+    with open("funny.json", "r") as f:
+        funny_commands = json.load(f)
+        for command in funny_commands.keys():
+            commands.append(BotCommand(command, f"Risponde con {command}"))
+
     await application.bot.set_my_commands(commands)
 
 
@@ -83,6 +90,20 @@ async def is_admin(update: Update, context: CallbackContext) -> bool:
         return False
 
 
+# Funzione per gestire i comandi dinamici
+async def handle_funny_command(update: Update, context: CallbackContext) -> None:
+    command = update.message.text.lstrip("/").split()[0]  # Ottieni il comando senza "/"
+    with open("funny.json", "r") as f:
+        funny_commands = json.load(f)
+        if command in funny_commands:
+            response = funny_commands[command]
+            await update.message.reply_text(response)
+            logger.info(f"Comando '{command}' eseguito con successo.")
+        else:
+            await update.message.reply_text("Comando non riconosciuto.")
+            logger.warning(f"Comando '{command}' non trovato in funny.json.")
+
+
 def main():
     TOKEN = os.environ["TOKEN"]
     app = ApplicationBuilder().token(TOKEN).build()
@@ -90,6 +111,15 @@ def main():
     # Aggiungi i comandi
     app.add_handler(CommandHandler("nextmatch", handle_nextmatch))
     app.add_handler(CommandHandler("help", handle_help))
+
+    # Carica comandi dinamici da funny.json
+    with open("funny.json", "r") as f:
+        funny_commands = json.load(f)
+        for command in funny_commands.keys():
+            app.add_handler(CommandHandler(command, handle_funny_command))
+
+    # Setta i comandi visibili del bot
+    app.job_queue.run_once(lambda _: set_commands(app), when=0)
 
     logger.debug("Il bot è in esecuzione...")
     app.run_polling()
