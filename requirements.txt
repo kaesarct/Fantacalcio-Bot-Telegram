@@ -3,3 +3,4 @@ requests
 beautifulsoup4
 peewee
 psycopg2-binary
+python-telegram-bot[job-queue]
