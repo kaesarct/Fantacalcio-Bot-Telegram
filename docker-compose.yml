@@ -5,11 +5,12 @@ services:
     container_name: telegram_bot
     env_file:
       - .env
+    ports:
+      - "5678:5678"
     depends_on:
       - db
     volumes:
       - .:/app
-      - ./logs:/app/logs  # Volume per mappare i log locali
     restart: always  # Riavvia sempre il servizio
 
   db:

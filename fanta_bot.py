@@ -1,29 +1,30 @@
-import json
-import os
 from telegram import BotCommand, Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    ContextTypes,
     CallbackContext,
 )
 
-from logger import logger
-from db_connection import initialize_database
-from seriea_function import nextmatch
+from functions.scraping_function import get_team_name, get_team_summary, update_rose
+from settings import FUNNY_COMMANDS, TOKEN, DEBUG_MODE
+from utils.logger import logger
+from utils.db_connection import initialize_database
+from functions.seriea_function import nextmatch
 
-try:
-    # Carica comandi dinamici da funny.json
-    with open("funny.json", "r") as f:
-        FUNNY_COMMANDS = json.load(f)
-except FileNotFoundError:
-    FUNNY_COMMANDS = {}
+if DEBUG_MODE == "true":
+    import debugpy
+
+    debugpy.listen(("0.0.0.0", 5678))
+    logger.info("Debugger listening on port 5678")
 
 
 # Funzione per configurare i comandi del bot
 async def set_commands(application):
     commands = [
         BotCommand("nextmatch", "Mostra le prossime partite della Serie A"),
+        BotCommand(
+            "analize", "Mostra le variazioni di prezzo e di FVM di ogni squadra"
+        ),
         BotCommand("help", "Mostra i comandi disponibili"),
     ]
 
@@ -57,18 +58,12 @@ async def handle_nextmatch(update: Update, context: CallbackContext) -> None:
 
 async def handle_help(update: Update, context: CallbackContext) -> None:
     try:
-        if not await is_admin(update, context):
-            help_text = (
-                "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
-                "/nextmatch - Mostra le prossime partite della Serie A.\n"
-                "/help - Mostra questo messaggio di aiuto."
-            )
-        else:
-            help_text = (
-                "Benvenuto! Ecco i comandi disponibili per l'admin:\n\n"
-                "/nextmatch - Mostra le prossime partite della Serie A.\n"
-                "/help - Mostra questo messaggio di aiuto."
-            )
+        help_text = (
+            "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
+            "/nextmatch - Mostra le prossime partite della Serie A.\n"
+            "/analize - Mostra le variazioni di prezzo e di FVM di ogni squadra\n"
+            "/help - Mostra questo messaggio di aiuto.",
+        )
 
         await update.message.reply_text(help_text)
         logger.info("L'utente %s ha richiesto l'help.", update.message.from_user.id)
@@ -77,19 +72,36 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
         logger.error("Errore durante l'esecuzione del comando /help: %s", e)
 
 
-async def is_admin(update: Update, context: CallbackContext) -> bool:
-    chat_id = update.message.chat_id
-    user_id = update.message.from_user.id
-
+async def handle_initialize_db(update: Update, context: CallbackContext) -> None:
     try:
-        chat_administrators = await context.bot.get_chat_administrators(chat_id)
-        is_admin = any(admin.user.id == user_id for admin in chat_administrators)
-        logger.info("Verifica amministratore per l'utente %s: %s", user_id, is_admin)
-        return is_admin
-
+        await update.message.reply_text(
+            f"Ci vorrà del tempo. Mettiti comodo e attendi il messaggio di avvenuto successo"
+        )
+        text = get_team_name()
+        if text == "error":
+            await update.message.reply_text(
+                "Errore durante il popolamento del database."
+            )
+        else:
+            await update.message.reply_text(f"Database popolato con successo: {text}")
+            logger.info("Database popolato con successo.")
     except Exception as e:
-        logger.error("Errore durante la verifica dell'amministratore: %s", e)
-        return False
+        logger.error("Errore durante l'esecuzione del comando /initialize_db: %s", e)
+
+
+async def handle_update_db(update: Update, context: CallbackContext) -> None:
+    try:
+        await update.message.reply_text(f"Attendi il messaggio di avvenuto successo")
+        response = update_rose()
+        if not response:
+            await update.message.reply_text(
+                "Errore durante il popolamento del database."
+            )
+        else:
+            await update.message.reply_text(f"Database popolato con successo")
+            logger.info("Database popolato con successo.")
+    except Exception as e:
+        logger.error("Errore durante l'esecuzione del comando /update_db: %s", e)
 
 
 # Funzione per gestire i comandi dinamici
@@ -104,19 +116,30 @@ async def handle_funny_command(update: Update, context: CallbackContext) -> None
         logger.warning(f"Comando '{command}' non trovato in funny.json.")
 
 
+async def handle_analyze_command(update: Update, context: CallbackContext) -> None:
+    try:
+        message = get_team_summary()
+        await update.message.reply_text(message)
+        logger.info("L'utente %s ha richiesto analyze.", update.message.from_user.id)
+    except Exception as e:
+        logger.error("Errore durante l'esecuzione del comando /analyze: %s", e)
+
+
 def main():
-    TOKEN = os.environ["TOKEN"]
+    initialize_database()  # Inizializza il database
     app = ApplicationBuilder().token(TOKEN).build()
+    logger.debug(f"FUNNY: {FUNNY_COMMANDS}")
 
     # Aggiungi i comandi
     app.add_handler(CommandHandler("nextmatch", handle_nextmatch))
+    app.add_handler(CommandHandler("analize", handle_analyze_command))
     app.add_handler(CommandHandler("help", handle_help))
 
-    # Carica comandi dinamici da funny.json
-    with open("funny.json", "r") as f:
-        funny_commands = json.load(f)
-        for command in funny_commands.keys():
-            app.add_handler(CommandHandler(command, handle_funny_command))
+    app.add_handler(CommandHandler("initialize_db", handle_initialize_db))
+    app.add_handler(CommandHandler("update_db", handle_update_db))
+
+    for command in FUNNY_COMMANDS.keys():
+        app.add_handler(CommandHandler(command, handle_funny_command))
 
     # Setta i comandi visibili del bot
     app.job_queue.run_once(lambda _: set_commands(app), when=0)
@@ -126,5 +149,4 @@ def main():
 
 
 if __name__ == "__main__":
-    initialize_database()  # Inizializza il database
     main()

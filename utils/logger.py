@@ -1,13 +1,15 @@
 import logging
 import os
 
+from settings import LOG_FILE, LOG_LEVEL
+
 # Configurazione del logging
-LOG_FILE = "logs/bot.log"
+
 os.makedirs(
     os.path.dirname(LOG_FILE), exist_ok=True
 )  # Assicurati che la directory esista
 
-if os.getenv("LOG") == "DEBUG":
+if LOG_LEVEL == "DEBUG":
     level = logging.DEBUG
 else:
     level = logging.INFO
