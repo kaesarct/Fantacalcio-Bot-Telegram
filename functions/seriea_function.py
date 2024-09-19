@@ -1,8 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from const import Team, day_of_week_map
-from logger import logger
+from utils.const import Team, day_of_week_map
+from utils.logger import logger
 
 
 def nextmatch() -> str:
