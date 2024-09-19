@@ -3,5 +3,6 @@ doc
 .venv
 __pycache__
 utils/logs/*
+utils/files/*
 
 funny.json

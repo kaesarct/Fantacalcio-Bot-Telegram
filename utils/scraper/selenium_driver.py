@@ -4,16 +4,15 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.chrome.options import Options
 from time import sleep
-from settings import DEFAULT_TIMEOUT
+from settings import DEFAULT_TIMEOUT, DOWNLOAD_FOLDER
 from utils.logger import logger
 
 
 class SeleniumDriver(webdriver.Chrome):
     """Custom wrapper around the Chrome Selenium webdriver to store the downloads folder."""
 
-    def __init__(self, downloads_folder: str, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.downloads_folder = downloads_folder
 
     def get_and_verify_url(self, url: str) -> bool:
         """
@@ -54,22 +53,15 @@ class SeleniumDriverFactory:
     def create_driver(
         chrome_binary_path: str = "/opt/chrome-headless-shell-linux64/chrome-headless-shell",
         chromedriver_binary_path: str = "/opt/chromedriver-linux64/chromedriver",
-        downloads_folder: str | None = None,
     ) -> SeleniumDriver:
         """Creates and returns a Selenium driver with specified options."""
 
-        downloads_folder = downloads_folder or mkdtemp()
-
         try:
-            options = SeleniumDriverFactory._get_driver_options(
-                chrome_binary_path, downloads_folder
-            )
+            options = SeleniumDriverFactory._get_driver_options(chrome_binary_path)
             service = SeleniumDriverFactory._get_driver_service(
                 chromedriver_binary_path
             )
-            return SeleniumDriver(
-                downloads_folder=downloads_folder, service=service, options=options
-            )
+            return SeleniumDriver(service=service, options=options)
         except Exception as e:
             logger.error(f"Failed to instantiate webdriver: {e}")
             raise RuntimeError(f"Failed to instantiate webdriver: {e}")
@@ -80,7 +72,7 @@ class SeleniumDriverFactory:
         return ChromeService(executable_path=chromedriver_binary_path)
 
     @staticmethod
-    def _get_driver_options(chrome_binary_path: str, downloads_folder: str) -> Options:
+    def _get_driver_options(chrome_binary_path: str) -> Options:
         """Returns the options configured for the Selenium Chrome WebDriver."""
 
         options = Options()
@@ -103,7 +95,7 @@ class SeleniumDriverFactory:
 
         # Configure download preferences
         prefs = {
-            "download.default_directory": downloads_folder,
+            "download.default_directory": DOWNLOAD_FOLDER,
             "download.prompt_for_download": False,
             "download.directory_upgrade": True,
         }

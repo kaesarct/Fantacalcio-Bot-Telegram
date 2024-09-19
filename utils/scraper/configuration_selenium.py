@@ -52,7 +52,7 @@ def get_rose() -> List[Teams]:
         logger.debug(f"Numero di pagine: {total_pages}")
 
         teams_list = _extract_teams_from_pages(driver, url, total_pages)
-
+        logger.debug(f"Squadre estratte: {len(teams_list)}")
         # Scarica i file CSV e Excel
         _download_files(driver)
 
@@ -84,17 +84,15 @@ def _extract_teams_from_pages(
 def _download_files(driver: SeleniumDriver) -> None:
     """Scarica i file CSV e Excel e attende il completamento del download."""
     try:
-        # Click per scaricare i file CSV ed Excel
-        driver.find_element(By.ID, "tocsv").click()
-        logger.debug("Cliccato per scaricare CSV")
-
-        driver.find_element(By.ID, "toexcel").click()
-        logger.debug("Cliccato per scaricare Excel")
-
+        # Esegui il JavaScript per scaricare il file CSV
+        driver.execute_script("MyLeague.downloadRosters();")
+        logger.debug("Eseguito JavaScript per scaricare CSV")
+        sleep(DEFAULT_TIMEOUT)
+        # Esegui il JavaScript per scaricare il file Excel
+        driver.execute_script("downloadRosters();")
+        logger.debug("Eseguito JavaScript per scaricare Excel")
+        sleep(DEFAULT_TIMEOUT)
         # Aggiungi un'attesa per assicurarti che il download sia completo
-        sleep(
-            5
-        )  # Aspetta 5 secondi, potrebbe essere ottimizzato con un controllo del file system
     except Exception as e:
         logger.error(f"Errore nel download dei file: {e}")
 

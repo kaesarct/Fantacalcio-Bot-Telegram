@@ -2,6 +2,7 @@ import json
 import os
 
 LOG_FILE = "./utils/logs/bot.log"
+DOWNLOAD_FOLDER = "./utils/files/"
 BASE_URL_LEGHE = "https://leghe.fantacalcio.it/"
 try:
     # Carica comandi dinamici da funny.json
