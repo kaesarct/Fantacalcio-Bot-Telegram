@@ -1,12 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
+from settings import BASE_URL
 from utils.const import Team, day_of_week_map
 from utils.logger import logger
 
 
 def nextmatch() -> str:
-    url = "https://www.fantacalcio.it/live-serie-a"
+    url = f"{BASE_URL}live-serie-a"
 
     try:
         logger.info("Richiesta informazioni partite dal sito %s", url)

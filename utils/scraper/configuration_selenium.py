@@ -1,3 +1,4 @@
+import os
 from typing import List
 from time import sleep
 from selenium.webdriver.common.by import By
@@ -5,8 +6,16 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from bs4 import BeautifulSoup
 
+from utils.files import merge_csv_files, rename_file
 from utils.scraper.selenium_driver import SeleniumDriver, SeleniumDriverFactory
-from settings import BASE_URL_LEGHE, LEGA_FANTA, DEFAULT_TIMEOUT, USERNAME, PASSWORD
+from settings import (
+    BASE_URL_LEGHE,
+    DOWNLOAD_FOLDER,
+    LEGA_FANTA,
+    DEFAULT_TIMEOUT,
+    USERNAME,
+    PASSWORD,
+)
 from utils.db_connection import Teams
 from utils.logger import logger
 
@@ -53,9 +62,6 @@ def get_rose() -> List[Teams]:
 
         teams_list = _extract_teams_from_pages(driver, url, total_pages)
         logger.debug(f"Squadre estratte: {len(teams_list)}")
-        # Scarica i file CSV e Excel
-        _download_files(driver)
-
         driver.quit()
         return teams_list
     except Exception as e:
@@ -68,30 +74,58 @@ def _extract_teams_from_pages(
 ) -> List[Teams]:
     """Estrae le squadre dalle pagine HTML e le inserisce nella lista."""
     teams_list: List[Teams] = []
+    _download_files_csv(driver, 1)
+    html_page = driver.get_html()
+    teams_list += _process_list_html(html_page)
 
-    for page in range(1, total_pages + 1):
+    driver.execute_script("downloadRosters();")
+    logger.debug("Eseguito JavaScript per scaricare Excel")
+    sleep(DEFAULT_TIMEOUT)
+
+    for page in range(2, total_pages + 1):
         paged_url = f"{base_url}?pag={page}"
+        logger.debug(f"URL della pagina: {paged_url}")
         if not driver.get_and_verify_url(paged_url):
             logger.error(f"Errore nel caricamento della pagina {paged_url}")
             return []
 
         html_page = driver.get_html()
-        teams_list.extend(_process_list_html(html_page))
+        teams_list += _process_list_html(html_page)
+        _download_files_csv(driver, page)
 
+    _merge_files(total_pages)
     return teams_list
 
 
-def _download_files(driver: SeleniumDriver) -> None:
+def _merge_files(total_pages: int) -> None:
+    """Unisce i file CSV e Excel in un unico file."""
+    csv_list_files = []
+    for page in range(1, total_pages + 1):
+        csv_list_files.append(f"{DOWNLOAD_FOLDER}roster{page}.csv")
+
+    merge_csv_files(csv_list_files, f"{DOWNLOAD_FOLDER}{LEGA_FANTA}-rosters.csv")
+    logger.debug("File CSV uniti con successo")
+    for file in csv_list_files:
+        os.remove(file)
+
+
+def _rename_files(page: int) -> None:
+    """Rinomina i file CSV e Excel."""
+    # Implementa la logica per rinomare i file CSV e Excel
+    rename_file(
+        f"{DOWNLOAD_FOLDER}{LEGA_FANTA}-rosters.csv",
+        f"{DOWNLOAD_FOLDER}roster{page}.csv",
+    )
+
+
+def _download_files_csv(driver: SeleniumDriver, page: int) -> None:
     """Scarica i file CSV e Excel e attende il completamento del download."""
     try:
         # Esegui il JavaScript per scaricare il file CSV
         driver.execute_script("MyLeague.downloadRosters();")
         logger.debug("Eseguito JavaScript per scaricare CSV")
         sleep(DEFAULT_TIMEOUT)
-        # Esegui il JavaScript per scaricare il file Excel
-        driver.execute_script("downloadRosters();")
-        logger.debug("Eseguito JavaScript per scaricare Excel")
-        sleep(DEFAULT_TIMEOUT)
+        _rename_files(page)
         # Aggiungi un'attesa per assicurarti che il download sia completo
     except Exception as e:
         logger.error(f"Errore nel download dei file: {e}")
@@ -125,10 +159,10 @@ def _process_list_html(html_page: BeautifulSoup) -> List[Teams]:
             # Recupera o crea l'oggetto Teams nel database
             team = Teams.get_or_none(id=int(data_id))
             if not team:
-                team = Teams.create(id=int(data_id), name=heading_text)
+                team = Teams.create(id=int(data_id), name=heading_text.strip())
                 logger.debug(f"Creato team: {team}")
             else:
-                team.name = heading_text
+                team.name = heading_text.strip()
                 team.save()
                 logger.debug(f"Aggiornato team: {team}")
 

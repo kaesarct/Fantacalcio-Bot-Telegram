@@ -1,9 +1,11 @@
 python-telegram-bot
+python-telegram-bot[job-queue]
 requests
 beautifulsoup4
 peewee
 psycopg2-binary
-python-telegram-bot[job-queue]
 selenium
 bs4
 debugpy
+pandas
+openpyxl

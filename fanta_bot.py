@@ -5,7 +5,7 @@ from telegram.ext import (
     CallbackContext,
 )
 
-from functions.scraping_function import get_team_name
+from functions.scraping_function import get_team_name, update_rose
 from settings import FUNNY_COMMANDS, TOKEN, DEBUG_MODE
 from utils.logger import logger
 from utils.db_connection import initialize_database
@@ -68,7 +68,7 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
         logger.error("Errore durante l'esecuzione del comando /help: %s", e)
 
 
-async def handle_populate_db(update: Update, context: CallbackContext) -> None:
+async def handle_initialize_db(update: Update, context: CallbackContext) -> None:
     try:
         await update.message.reply_text(
             f"Ci vorrà del tempo. Mettiti comodo e attendi il messaggio di avvenuto successo"
@@ -82,7 +82,22 @@ async def handle_populate_db(update: Update, context: CallbackContext) -> None:
             await update.message.reply_text(f"Database popolato con successo: {text}")
             logger.info("Database popolato con successo.")
     except Exception as e:
-        logger.error("Errore durante l'esecuzione del comando /populate: %s", e)
+        logger.error("Errore durante l'esecuzione del comando /initialize_db: %s", e)
+
+
+async def handle_update_db(update: Update, context: CallbackContext) -> None:
+    try:
+        await update.message.reply_text(f"Attendi il messaggio di avvenuto successo")
+        response = update_rose()
+        if not response:
+            await update.message.reply_text(
+                "Errore durante il popolamento del database."
+            )
+        else:
+            await update.message.reply_text(f"Database popolato con successo")
+            logger.info("Database popolato con successo.")
+    except Exception as e:
+        logger.error("Errore durante l'esecuzione del comando /update_db: %s", e)
 
 
 # Funzione per gestire i comandi dinamici
@@ -105,7 +120,9 @@ def main():
     # Aggiungi i comandi
     app.add_handler(CommandHandler("nextmatch", handle_nextmatch))
     app.add_handler(CommandHandler("help", handle_help))
-    app.add_handler(CommandHandler("populate", handle_populate_db))
+
+    app.add_handler(CommandHandler("initialize_db", handle_initialize_db))
+    app.add_handler(CommandHandler("update_db", handle_update_db))
 
     for command in FUNNY_COMMANDS.keys():
         app.add_handler(CommandHandler(command, handle_funny_command))
