@@ -5,7 +5,7 @@ from telegram.ext import (
     CallbackContext,
 )
 
-from functions.scraping_function import get_team_name, update_rose
+from functions.scraping_function import get_team_name, get_team_summary, update_rose
 from settings import FUNNY_COMMANDS, TOKEN, DEBUG_MODE
 from utils.logger import logger
 from utils.db_connection import initialize_database
@@ -22,6 +22,9 @@ if DEBUG_MODE == "true":
 async def set_commands(application):
     commands = [
         BotCommand("nextmatch", "Mostra le prossime partite della Serie A"),
+        BotCommand(
+            "analize", "Mostra le variazioni di prezzo e di FVM di ogni squadra"
+        ),
         BotCommand("help", "Mostra i comandi disponibili"),
     ]
 
@@ -58,7 +61,8 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
         help_text = (
             "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
             "/nextmatch - Mostra le prossime partite della Serie A.\n"
-            "/help - Mostra questo messaggio di aiuto."
+            "/analize - Mostra le variazioni di prezzo e di FVM di ogni squadra\n"
+            "/help - Mostra questo messaggio di aiuto.",
         )
 
         await update.message.reply_text(help_text)
@@ -112,6 +116,15 @@ async def handle_funny_command(update: Update, context: CallbackContext) -> None
         logger.warning(f"Comando '{command}' non trovato in funny.json.")
 
 
+async def handle_analyze_command(update: Update, context: CallbackContext) -> None:
+    try:
+        message = get_team_summary()
+        await update.message.reply_text(message)
+        logger.info("L'utente %s ha richiesto analyze.", update.message.from_user.id)
+    except Exception as e:
+        logger.error("Errore durante l'esecuzione del comando /analyze: %s", e)
+
+
 def main():
     initialize_database()  # Inizializza il database
     app = ApplicationBuilder().token(TOKEN).build()
@@ -119,6 +132,7 @@ def main():
 
     # Aggiungi i comandi
     app.add_handler(CommandHandler("nextmatch", handle_nextmatch))
+    app.add_handler(CommandHandler("analize", handle_analyze_command))
     app.add_handler(CommandHandler("help", handle_help))
 
     app.add_handler(CommandHandler("initialize_db", handle_initialize_db))

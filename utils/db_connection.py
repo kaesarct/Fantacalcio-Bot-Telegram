@@ -62,16 +62,29 @@ class Player(Model):
 
 
 class Squads(Model):
-    team = ForeignKeyField(
-        Teams, backref="acquisitions"
-    )  # Collega l'acquisto alla squadra
+    team = ForeignKeyField(Teams, backref="squads")  # Collega l'acquisto alla squadra
     player = ForeignKeyField(
-        Player, backref="acquisitions"
+        Player, backref="squads"
     )  # Collega l'acquisto al giocatore
     purchase_price = FloatField()  # Colonna per il prezzo di acquisto
     updated_at = DateTimeField(
         default=datetime.now
     )  # Colonna per la data di aggiornamento
+
+    class Meta:
+        database = db
+
+
+class TeamSummary(Model):
+    team = ForeignKeyField(
+        Teams, backref="summary_team", primary_key=True
+    )  # Chiave primaria
+    credits_spent = FloatField(default=0.0)  # Crediti spesi
+    remaining_credits = FloatField(default=350.0)  # Crediti rimasti
+    initial_team_value = FloatField()  # Valore totale iniziale
+    current_team_value = FloatField()  # Valore totale attuale
+    total_fvm = FloatField()  # Totale FVM
+    match_day = BigIntegerField()  # Giornata
 
     class Meta:
         database = db
@@ -85,6 +98,7 @@ def initialize_database():
         db.create_tables([Teams], safe=True)
         db.create_tables([Player], safe=True)
         db.create_tables([Squads], safe=True)
+        db.create_tables([TeamSummary], safe=True)
         logger.info("Database tables created.")
     except Exception as e:
         logger.error(f"An error occurred while initializing the database: {e}")
