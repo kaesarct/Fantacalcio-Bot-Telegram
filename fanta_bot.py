@@ -62,8 +62,8 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
             "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
             "/nextmatch - Mostra le prossime partite della Serie A.\n"
             "/analize - Mostra le variazioni di prezzo e di FVM di ogni squadra\n"
-            "/help - Mostra questo messaggio di aiuto.",
-        )
+            "/help - Mostra questo messaggio di aiuto."
+        )  # Rimuovi la virgola qui
 
         await update.message.reply_text(help_text)
         logger.info("L'utente %s ha richiesto l'help.", update.message.from_user.id)
@@ -119,7 +119,9 @@ async def handle_funny_command(update: Update, context: CallbackContext) -> None
 async def handle_analyze_command(update: Update, context: CallbackContext) -> None:
     try:
         message = get_team_summary()
-        await update.message.reply_text(message)
+        max_length = 4096
+        for i in range(0, len(message), max_length):
+            await update.message.reply_text(message[i : i + max_length])
         logger.info("L'utente %s ha richiesto analyze.", update.message.from_user.id)
     except Exception as e:
         logger.error("Errore durante l'esecuzione del comando /analyze: %s", e)

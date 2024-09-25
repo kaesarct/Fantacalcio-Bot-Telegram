@@ -34,15 +34,21 @@ def get_team_summary():
     match_day = get_last_matchday()
     teams = Teams.select()  # Seleziona tutte le squadre
     response = _populate_team_summary(match_day, teams)
-    if response:
+    if not response:
         return "Errore durante l'aggiornamento dei team_summary."
     message = "Ecco le variazioni di prezzo e valore delle squadre:\n"
     for team in teams:
-        team_summaries = TeamSummary.select().where(TeamSummary.match_day == match_day)
-        team_summaries_prev = TeamSummary.select().where(
-            TeamSummary.match_day == match_day - 1
+        team_summary = TeamSummary.get_or_none(
+            (TeamSummary.team == team) & (TeamSummary.match_day == match_day)
         )
-        message += _compare_team_summaries(team_summaries, team_summaries_prev) + "\n"
+        team_summary_prev = TeamSummary.get_or_none(
+            (TeamSummary.team == team) & (TeamSummary.match_day == match_day - 1)
+        )
+        if team_summary is None:
+            return "Errore durante l'aggiornamento dei team_summary."
+        if team_summary_prev is None:
+            return "Nessuna variazione"
+        message += _compare_team_summaries(team_summary, team_summary_prev) + "\n"
     return message
 
 
@@ -77,7 +83,6 @@ def _populate_team_summary(match_day, teams):
                     initial_team_value=initial_team_value,
                     current_team_value=current_team_value,
                     total_fvm=total_fvm,
-                    match_day=match_day,
                 )
             logger.debug(f"Aggiornato team_summary: {team}")
         return True
@@ -89,43 +94,73 @@ def _populate_team_summary(match_day, teams):
 def _compare_team_summaries(
     current_summary: TeamSummary, previous_summary: TeamSummary
 ):
-    differences = {}
-    team_name = current_summary.team
+    try:
+        differences = {}
+        same = {}
+        team_id = current_summary.team
+        team_name = Teams.get(Teams.id == team_id).name
 
-    # Crediti spesi
-    credits_spent_diff = current_summary.credits_spent - previous_summary.credits_spent
-    differences["credits_spent"] = credits_spent_diff
+        key_maps = {
+            "credits_spent": "Crediti spesi all'asta",
+            "remaining_credits": "Crediti Rimasti dall'asta",
+            "initial_team_value": "Valore iniziale rosa",
+            "current_team_value": "Valore attuale rosa",
+            "total_fvm": "FantaValore di Mercato",
+        }
+        # Crediti spesi
+        credits_spent_diff = (
+            current_summary.credits_spent - previous_summary.credits_spent
+        )
+        if credits_spent_diff != 0:
+            differences["credits_spent"] = credits_spent_diff
+        else:
+            same["credits_spent"] = credits_spent_diff
 
-    # Crediti rimasti
-    credits_remaining_diff = (
-        current_summary.credits_remaining - previous_summary.credits_remaining
-    )
-    differences["credits_remaining"] = credits_remaining_diff
+        # Crediti rimasti
+        credits_remaining_diff = (
+            current_summary.remaining_credits - previous_summary.remaining_credits
+        )
+        if credits_spent_diff != 0:
+            differences["remaining_credits"] = credits_remaining_diff
+        else:
+            same["remaining_credits"] = credits_remaining_diff
+        # Totale valore squadra iniziale
+        initial_total_value_diff = (
+            current_summary.initial_team_value - previous_summary.initial_team_value
+        )
+        if initial_total_value_diff != 0:
+            differences["initial_team_value"] = initial_total_value_diff
+        else:
+            same["initial_team_value"] = initial_total_value_diff
 
-    # Totale valore squadra iniziale
-    initial_total_value_diff = (
-        current_summary.initial_total_value - previous_summary.initial_total_value
-    )
-    differences["initial_total_value"] = initial_total_value_diff
+        # Totale valore squadra attuale
+        current_total_value_diff = (
+            current_summary.current_team_value - previous_summary.current_team_value
+        )
+        if current_total_value_diff != 0:
+            differences["current_team_value"] = current_total_value_diff
+        else:
+            same["current_team_value"] = current_total_value_diff
 
-    # Totale valore squadra attuale
-    current_total_value_diff = (
-        current_summary.current_total_value - previous_summary.current_total_value
-    )
-    differences["current_total_value"] = current_total_value_diff
+        # Totale FVM
+        total_fvm_diff = current_summary.total_fvm - previous_summary.total_fvm
+        if total_fvm_diff != 0:
+            differences["total_fvm"] = total_fvm_diff
+        else:
+            same["total_fvm"] = total_fvm_diff
 
-    # Totale FVM
-    total_fvm_diff = current_summary.total_fvm - previous_summary.total_fvm
-    differences["total_fvm"] = total_fvm_diff
-
-    # Crea il messaggio di output
-    message = f"Team: {team_name}\n"
-
-    if all(diff == 0 for diff in differences.values()):
-        message += "Nessuna differenza trovata."
-    else:
+        # Crea il messaggio di output
+        message = f"\n\nTeam: {team_name}\n"
         for key, value in differences.items():
             previous_value = getattr(previous_summary, key)
-            message += f"Differenza {key.replace('_', ' ')}: {value} (precedente: {previous_value})\n"
+            message += (
+                f"  Differenza {key_maps[key]}: {value} (precedente: {previous_value})\n"
+            )
 
-    return message.strip()
+        for key, value in same.items():
+            message += f"  {key_maps[key]}: {value}\nrimasto uguale\n"
+
+        return message.strip()
+    except Exception as e:
+        logger.error(f"Errore durante la comparazione dei team_summary: {e}")
+        return "Errore durante la comparazione dei team_summary."

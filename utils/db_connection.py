@@ -8,6 +8,7 @@ from peewee import (
     FloatField,
     ForeignKeyField,
     DateTimeField,
+    CompositeKey,
 )
 from datetime import datetime
 
@@ -76,9 +77,7 @@ class Squads(Model):
 
 
 class TeamSummary(Model):
-    team = ForeignKeyField(
-        Teams, backref="summary_team", primary_key=True
-    )  # Chiave primaria
+    team = ForeignKeyField(Teams, backref="summary_team")  # auto_increment disabilitato
     credits_spent = FloatField(default=0.0)  # Crediti spesi
     remaining_credits = FloatField(default=350.0)  # Crediti rimasti
     initial_team_value = FloatField()  # Valore totale iniziale
@@ -88,6 +87,7 @@ class TeamSummary(Model):
 
     class Meta:
         database = db
+        primary_key = CompositeKey("team", "match_day")
 
 
 def initialize_database():
