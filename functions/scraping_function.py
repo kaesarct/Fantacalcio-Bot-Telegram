@@ -36,20 +36,31 @@ def get_team_summary():
     response = _populate_team_summary(match_day, teams)
     if not response:
         return "Errore durante l'aggiornamento dei team_summary."
-    message = "Ecco le variazioni di prezzo e valore delle squadre:\n"
+    messages = []  # Lista di messaggi per ogni team
+    messages.append("Ecco le variazioni di prezzo e valore delle squadre:\n")
+
     for team in teams:
         team_summary = TeamSummary.get_or_none(
             (TeamSummary.team == team) & (TeamSummary.match_day == match_day)
         )
+
         team_summary_prev = TeamSummary.get_or_none(
             (TeamSummary.team == team) & (TeamSummary.match_day == match_day - 1)
         )
+
         if team_summary is None:
-            return "Errore durante l'aggiornamento dei team_summary."
+            messages.append("Errore durante l'aggiornamento dei team_summary.")
+            continue
         if team_summary_prev is None:
-            return "Nessuna variazione"
-        message += _compare_team_summaries(team_summary, team_summary_prev) + "\n"
-    return message
+            messages.append(
+                f"Team: {team.name}\nNessuna variazione rispetto alla giornata precedente."
+            )
+            continue
+
+        # Confronta i riepiloghi e aggiungi il messaggio alla lista
+        message = _compare_team_summaries(team_summary, team_summary_prev)
+        messages.append(message)
+    return messages
 
 
 def _populate_team_summary(match_day, teams):
@@ -149,16 +160,19 @@ def _compare_team_summaries(
         else:
             same["total_fvm"] = total_fvm_diff
 
-        # Crea il messaggio di output
-        message = f"\n\nTeam: {team_name}\n"
-        for key, value in differences.items():
-            previous_value = getattr(previous_summary, key)
-            message += (
-                f"  Differenza {key_maps[key]}: {value} (precedente: {previous_value})\n"
-            )
-
-        for key, value in same.items():
-            message += f"  {key_maps[key]}: {value}\nrimasto uguale\n"
+            # Creazione del messaggio formattato
+        message = f"\nTeam: {team_name}\n"
+        if differences:
+            message += "  * Variazioni:\n"
+            for key, value in differences.items():
+                previous_value = getattr(previous_summary, key)
+                message += (
+                    f"    * {key_maps[key]}: {value} (precedente: {previous_value})\n"
+                )
+        if same:
+            message += "  - Non ci sono variazioni:\n"
+            for key, value in same.items():
+                message += f"    - {key_maps[key]}: rimasto uguale ({value})\n"
 
         return message.strip()
     except Exception as e:

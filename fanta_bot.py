@@ -62,8 +62,13 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
             "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
             "/nextmatch - Mostra le prossime partite della Serie A.\n"
             "/analize - Mostra le variazioni di prezzo e di FVM di ogni squadra\n"
-            "/help - Mostra questo messaggio di aiuto."
-        )  # Rimuovi la virgola qui
+            "/help - Mostra questo messaggio di aiuto.\n\n"
+        )
+
+        # Aggiungi la sezione dei comandi divertenti dal JSON
+        if FUNNY_COMMANDS:  # Controlla se FUNNY_COMMANDS contiene delle chiavi
+            funny_commands = ", ".join(f"/{cmd}" for cmd in FUNNY_COMMANDS.keys())
+            help_text += f"Prova i seguenti comandi divertenti: {funny_commands}\n"
 
         await update.message.reply_text(help_text)
         logger.info("L'utente %s ha richiesto l'help.", update.message.from_user.id)
@@ -118,10 +123,14 @@ async def handle_funny_command(update: Update, context: CallbackContext) -> None
 
 async def handle_analyze_command(update: Update, context: CallbackContext) -> None:
     try:
-        message = get_team_summary()
+        messages = get_team_summary()  # Ottieni tutti i messaggi in una lista
         max_length = 4096
-        for i in range(0, len(message), max_length):
-            await update.message.reply_text(message[i : i + max_length])
+
+        # Invia un messaggio separato per ogni team
+        for message in messages:
+            for i in range(0, len(message), max_length):
+                await update.message.reply_text(message[i : i + max_length])
+
         logger.info("L'utente %s ha richiesto analyze.", update.message.from_user.id)
     except Exception as e:
         logger.error("Errore durante l'esecuzione del comando /analyze: %s", e)
