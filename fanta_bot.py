@@ -6,7 +6,8 @@ from telegram.ext import (
 )
 
 from functions.scraping_function import get_team_name, get_team_summary, update_rose
-from settings import FUNNY_COMMANDS, TOKEN, DEBUG_MODE
+from settings import DOWNLOAD_FOLDER, FUNNY_COMMANDS, LOG_FOLDER, TOKEN, DEBUG_MODE
+from utils.files import check_folder_exists
 from utils.logger import logger
 from utils.db_connection import initialize_database
 from functions.seriea_function import nextmatch
@@ -139,6 +140,10 @@ async def handle_analyze_command(update: Update, context: CallbackContext) -> No
 
 def main():
     initialize_database()  # Inizializza il database
+
+    check_folder_exists(LOG_FOLDER)
+    check_folder_exists(DOWNLOAD_FOLDER)
+
     app = ApplicationBuilder().token(TOKEN).build()
     logger.debug(f"FUNNY: {FUNNY_COMMANDS}")
 
