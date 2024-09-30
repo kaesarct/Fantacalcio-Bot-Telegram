@@ -1,7 +1,8 @@
 import json
 import os
 
-LOG_FILE = "./utils/logs/bot.log"
+LOG_FOLDER = "./utils/logs"
+LOG_FILE = f"{LOG_FOLDER}/bot.log"
 DOWNLOAD_FOLDER = "./utils/files/"
 BASE_URL_LEGHE = "https://leghe.fantacalcio.it/"
 BASE_URL = "https://www.fantacalcio.it/"
