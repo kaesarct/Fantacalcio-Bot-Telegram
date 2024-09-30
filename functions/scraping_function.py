@@ -1,7 +1,8 @@
+from telegram import Update
 from settings import DEFAULT_CREDIT
 from utils.logger import logger
 from utils.api_fanta import get_last_matchday, get_prices
-from utils.db_connection import TeamSummary, Teams
+from utils.db_connection import Player, TeamSummary, Teams
 from utils.files import get_rosters
 from utils.scraper.configuration_selenium import get_rose
 from utils.teams import (
@@ -32,7 +33,18 @@ def update_rose():
 
 def get_team_summary():
     match_day = get_last_matchday()
-    teams = Teams.select()  # Seleziona tutte le squadre
+    teams = Teams.select()
+
+    # seleziona ultimo giocatore nella tabbella player e vedi se il match day è aggiornato
+    players: Player = Player.select().first()
+    if players.match_day != match_day:
+        logger.debug("Db non aggiornato")
+        try:
+            update_rose()
+        except Exception as e:
+            logger.error("Errore durante l'aggiornamento dei team_summary: %s", e)
+            return "Errore durante l'aggiornamento dei database"
+
     response = _populate_team_summary(match_day, teams)
     if not response:
         return "Errore durante l'aggiornamento dei team_summary."
