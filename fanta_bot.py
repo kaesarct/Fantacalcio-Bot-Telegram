@@ -123,6 +123,7 @@ async def handle_funny_command(update: Update, context: CallbackContext) -> None
 
 async def handle_analyze_command(update: Update, context: CallbackContext) -> None:
     try:
+        await update.message.reply_text(f"Attendi il messaggio di avvenuto successo")
         messages = get_team_summary()  # Ottieni tutti i messaggi in una lista
         max_length = 4096
 
