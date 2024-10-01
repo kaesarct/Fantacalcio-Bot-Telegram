@@ -128,10 +128,19 @@ async def handle_analyze_command(update: Update, context: CallbackContext) -> No
         messages = get_team_summary()  # Ottieni tutti i messaggi in una lista
         max_length = 4096
 
-        # Invia un messaggio separato per ogni team
-        for message in messages:
-            for i in range(0, len(message), max_length):
-                await update.message.reply_text(message[i : i + max_length])
+        current_message = ""  # Messaggio che accumula i team
+        for team_message in messages:
+            # Se aggiungere il prossimo team supera il limite, invia il messaggio corrente
+            if len(current_message) + len(team_message) + 1 > max_length:  # +1 per il newline
+                await update.message.reply_text(current_message)
+                current_message = ""  # Resetta il messaggio per il prossimo blocco
+            
+            # Aggiungi il team al messaggio corrente
+            current_message += team_message + "\n"
+        
+        # Invia l'ultimo blocco di messaggi, se presente
+        if current_message:
+            await update.message.reply_text(current_message)
 
         logger.info("L'utente %s ha richiesto analyze.", update.message.from_user.id)
     except Exception as e:
