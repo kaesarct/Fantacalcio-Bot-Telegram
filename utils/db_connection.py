@@ -42,6 +42,15 @@ class Teams(Model):
         database = db
 
 
+class InjuryPlayers(Model):
+    id = BigIntegerField(unique=True)
+    name = TextField()
+    return_date = BigIntegerField(null=True)
+
+    class Meta:
+        database = db
+
+
 class Player(Model):
     player_id = BigIntegerField(primary_key=True)  # Colonna 'Id' come chiave primaria
     role = CharField()  # Colonna 'R'
@@ -99,6 +108,7 @@ def initialize_database():
         db.create_tables([Player], safe=True)
         db.create_tables([Squads], safe=True)
         db.create_tables([TeamSummary], safe=True)
+        db.create_tables([InjuryPlayers], safe=True)
         logger.info("Database tables created.")
     except Exception as e:
         logger.error(f"An error occurred while initializing the database: {e}")

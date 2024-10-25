@@ -1,16 +1,28 @@
-from telegram import BotCommand, Update
+from telegram import BotCommand, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackContext,
+    ConversationHandler,
+    MessageHandler,
+    filters,
+    CallbackQueryHandler,
 )
-
-from functions.scraping_function import get_team_name, get_team_summary, update_rose
-from settings import DOWNLOAD_FOLDER, FUNNY_COMMANDS, LOG_FOLDER, TOKEN, DEBUG_MODE
+from functions.scraping_function import (
+    get_healty_player,
+    get_team_name,
+    get_team_summary,
+    update_rose,
+)
+from settings import ADMIN_USER_ID, DOWNLOAD_FOLDER, FUNNY_COMMANDS, LOG_FOLDER, TOKEN, DEBUG_MODE
 from utils.files import check_folder_exists
 from utils.logger import logger
-from utils.db_connection import initialize_database
-from functions.seriea_function import nextmatch
+from utils.db_connection import initialize_database, InjuryPlayers, Player
+from functions.seriea_function import (
+    add_injury_player,
+    add_player_into_injuries_db,
+    nextmatch,
+)
 
 if DEBUG_MODE == "true":
     import debugpy
@@ -27,6 +39,10 @@ async def set_commands(application):
             "analize", "Mostra le variazioni di prezzo e di FVM di ogni squadra"
         ),
         BotCommand("help", "Mostra i comandi disponibili"),
+        BotCommand(
+            "recupero_infortuni",
+            "Mostra i giocatori infortunati che sono tornati convocati",
+        ),
     ]
 
     await application.bot.set_my_commands(commands)
@@ -63,6 +79,7 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
             "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
             "/nextmatch - Mostra le prossime partite della Serie A.\n"
             "/analize - Mostra le variazioni di prezzo e di FVM di ogni squadra\n"
+            "/recupero_infortuni - Mostra i giocatori infortunati che sono tornati convocati\n"
             "/help - Mostra questo messaggio di aiuto.\n\n"
         )
 
@@ -76,6 +93,96 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
 
     except Exception as e:
         logger.error("Errore durante l'esecuzione del comando /help: %s", e)
+
+
+async def handle_player_selection(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    player_id = int(query.data)  # Get the player ID from the callback data
+    query.answer()  # Acknowledge the callback
+
+    try:
+        # Find the player by their ID
+        player = Player.get(Player.player_id == player_id)
+
+        add_player_into_injuries_db(player)
+
+        await query.edit_message_text(
+            f"Giocatore {player.player_name} inserito come infortunato."
+        )
+
+    except Exception as e:
+        logger.error(f"Error while handling player selection: {e}")
+        await query.edit_message_text(
+            f"Errore durante l'inserimento di {player.player_name}. Riprova."
+        )
+
+
+# Step 1: Command handler - Start the process by asking for the name
+async def handle_add_player_injury(update: Update, context: CallbackContext) -> int:
+    # Check if the user ID matches the allowed user
+    if update.effective_user.id != ADMIN_USER_ID:
+        await update.message.reply_text(
+            "Ah ah, non fare il furbetto, non sei mica il presidente."
+        )
+        return (
+            ConversationHandler.END
+        )  # End the conversation if the user is not allowed
+
+    await update.message.reply_text(
+        "Perfavore insersci il nome del giocatore da inserire tra gli infortunati"
+    )
+    return 1
+
+
+# Step 2: Capture the player's name and process it
+async def receive_player_name(update: Update, context: CallbackContext) -> int:
+    player_name = update.message.text
+    response, players = add_injury_player(player_name)
+
+    if players is None:  # No players found or added successfully
+        await update.message.reply_text(response)
+    else:
+        # If multiple players are found, create buttons
+        keyboard = [
+            [InlineKeyboardButton(player.player_name, callback_data=player.player_id)]
+            for player in players
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        await update.message.reply_text(response, reply_markup=reply_markup)
+
+    return ConversationHandler.END
+
+
+async def button_click(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()  # Acknowledge the callback
+
+    player_id = query.data  # This is the player's ID from the button
+    player = Player.get_by_id(player_id)  # Fetch the player from the database
+
+    try:
+        add_player_into_injuries_db(player)
+        await query.edit_message_text(
+            text=f"Giocatore {player.player_name} inserito come infortunato."
+        )
+    except Exception as e:
+        logger.error(f"Error while adding injury player '{player.player_name}': {e}")
+        await query.edit_message_text(text="Si è verificato un errore. Riprova.")
+
+
+# Step 3: Fallback in case of errors or unexpected inputs
+async def cancel(update: Update, context: CallbackContext) -> int:
+    await update.message.reply_text("Operation cancelled.")
+    return ConversationHandler.END
+
+
+async def handle_healty_player(update: Update, context: CallbackContext) -> None:
+    try:
+
+        response = get_healty_player()
+        await update.message.reply_text(f"{response}")
+    except Exception as e:
+        logger.error("Errore durante l'esecuzione del comando /healty_player: %s", e)
 
 
 async def handle_initialize_db(update: Update, context: CallbackContext) -> None:
@@ -131,13 +238,15 @@ async def handle_analyze_command(update: Update, context: CallbackContext) -> No
         current_message = ""  # Messaggio che accumula i team
         for team_message in messages:
             # Se aggiungere il prossimo team supera il limite, invia il messaggio corrente
-            if len(current_message) + len(team_message) + 1 > max_length:  # +1 per il newline
+            if (
+                len(current_message) + len(team_message) + 1 > max_length
+            ):  # +1 per il newline
                 await update.message.reply_text(current_message)
                 current_message = ""  # Resetta il messaggio per il prossimo blocco
-            
+
             # Aggiungi il team al messaggio corrente
             current_message += team_message + "\n"
-        
+
         # Invia l'ultimo blocco di messaggi, se presente
         if current_message:
             await update.message.reply_text(current_message)
@@ -159,10 +268,23 @@ def main():
     # Aggiungi i comandi
     app.add_handler(CommandHandler("nextmatch", handle_nextmatch))
     app.add_handler(CommandHandler("analize", handle_analyze_command))
+    app.add_handler(CommandHandler("recupero_infortuni", handle_healty_player))
     app.add_handler(CommandHandler("help", handle_help))
 
     app.add_handler(CommandHandler("initialize_db", handle_initialize_db))
     app.add_handler(CommandHandler("update_db", handle_update_db))
+
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler("aggiungi_infortunio", handle_add_player_injury)],
+        states={
+            1: [MessageHandler(filters.TEXT & ~filters.COMMAND, receive_player_name)]
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+    )
+    app.add_handler(CallbackQueryHandler(button_click))
+
+    # Add the handler to the application
+    app.add_handler(conv_handler)
 
     for command in FUNNY_COMMANDS.keys():
         app.add_handler(CommandHandler(command, handle_funny_command))

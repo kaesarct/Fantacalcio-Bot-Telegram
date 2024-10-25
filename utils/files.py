@@ -1,8 +1,9 @@
 import os
+from typing import List
 import pandas as pd
 from datetime import datetime
 from settings import DOWNLOAD_FOLDER, LEGA_FANTA
-from utils.db_connection import Squads, Player, Teams
+from utils.db_connection import Squads, Player, Teams, InjuryPlayers
 from utils.logger import logger
 
 
@@ -60,6 +61,57 @@ def merge_csv_files(file_list: list, output_file: str) -> None:
 
     except Exception as e:
         logger.error(f"Errore durante l'unione dei file CSV: {e}")
+
+
+def get_injuries_player():
+    injury_players: List[InjuryPlayers] = InjuryPlayers.select()
+    list_injury = []
+    for player in injury_players:
+        if not player.return_date:
+            list_injury.append(
+                {
+                    "id": player.id,
+                    "name": player.name,
+                }
+            )
+    return list_injury
+
+
+def search_player_voto(match_day: int):
+    injuries_player: List[dict] = get_injuries_player()
+
+    if not injuries_player:
+        return "Nessun giocatore infortunato"
+
+    df = pd.read_excel(
+        f"{DOWNLOAD_FOLDER}voti.xlsx", skiprows=4
+    )  # Ignora la prima riga
+    player_healty = []
+    # take only row start with int in first Column
+    df_players = df[df.iloc[:, 0].astype(str).str.isdigit()]
+    print(len(df_players))
+
+    for player in injuries_player:
+        for index, row in df_players.iterrows():
+            id_player = row.values[0]
+            name_player = row.values[2]
+            if id_player == player["id"] and name_player == player["name"]:
+                player_healty.append(
+                    {
+                        "id": id_player,
+                        "name": name_player,
+                    }
+                )
+    if not player_healty:
+        return "Nessun giocatore ritornato dall' infortunio"
+    else:
+        message = "Sono tornati dall'infortunio i seguenti giocatori:\n"
+        for player in player_healty:
+            player_db: InjuryPlayers = InjuryPlayers.get_by_id(player["id"])
+            player_db.return_date = match_day
+            player_db.save()
+            message += f"{player['name']}\n"
+        return message
 
 
 def manage_prices_file(match_day: int):

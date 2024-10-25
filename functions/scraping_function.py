@@ -1,7 +1,7 @@
 from telegram import Update
 from settings import DEFAULT_CREDIT
 from utils.logger import logger
-from utils.api_fanta import get_last_matchday, get_prices
+from utils.api_fanta import get_last_matchday, get_prices, get_voti
 from utils.db_connection import Player, TeamSummary, Teams
 from utils.files import get_rosters
 from utils.scraper.configuration_selenium import get_rose
@@ -11,6 +11,11 @@ from utils.teams import (
     get_initial_team_value,
     get_total_fvm_actual,
 )
+
+
+def get_healty_player():
+    healty_player_message = get_voti()
+    return healty_player_message
 
 
 def get_team_name():

@@ -1,8 +1,10 @@
+from typing import List
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 from settings import BASE_URL
 from utils.const import Team, day_of_week_map
+from utils.db_connection import InjuryPlayers, Player
 from utils.logger import logger
 
 
@@ -103,3 +105,24 @@ def nextmatch() -> str:
 
     logger.info("Trovate %d partite.", len(match_list))
     return "\n".join(match_list) if match_list else "Nessuna partita trovata."
+
+
+def add_injury_player(player: str):
+    try:
+        players = Player.select().where(Player.player_name.contains(player))
+        if not players:
+            return "Giocatore non trovato", None
+        if len(players) > 1:
+            message = "Trovati più giocatori, seleziona il nome esatto:"
+            return message, players
+        add_player_into_injuries_db(players[0])
+        return "Giocatore inserito", None
+    except Exception as e:
+        logger.error(f"Error while adding injury player '{player}': {e}")
+        return "Si è verificato un errore. Riprova.", None
+
+
+def add_player_into_injuries_db(player: Player):
+    player_injuried = InjuryPlayers.get_or_none(id=player.player_id)
+    if not player_injuried:
+        InjuryPlayers.create(id=player.player_id, name=player.player_name)
