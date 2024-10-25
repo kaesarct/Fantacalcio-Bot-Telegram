@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
-from utils.files import manage_prices_file
+from utils.files import manage_prices_file, search_player_voto
 from utils.logger import logger
 from settings import BASE_API, BASE_URL, PASSWORD, USERNAME, DOWNLOAD_FOLDER
 
@@ -34,7 +34,7 @@ def get_last_matchday():
         match = re.search(r"Giornata (\d+)", text)
         if match:
             giornata_number = match.group(1)
-        return int(giornata_number)-1
+        return int(giornata_number) - 1
     else:
         return -1
 
@@ -67,6 +67,39 @@ def get_prices():
 
         match_day = get_last_matchday()
         manage_prices_file(match_day)
+    else:
+        logger.error(f"Errore nella chiamata GET: {get_response.status_code}")
+        return False
+
+def get_voti():
+    day = get_last_matchday()
+    # URL per la chiamata GET (dopo il login)
+    url_get = f"{URL_API}Excel/votes/19/{day}"
+
+    session = login_in_fanta()
+
+    if not session:
+        return False
+    # Facciamo la richiesta GET utilizzando la sessione (che mantiene i cookie)
+    get_response = session.get(url_get, stream=True)
+
+    # Verifichiamo se la richiesta GET è andata a buon fine
+    if get_response.status_code == 200:
+        # Definiamo il percorso dove salvare il file
+        output_file_path = (
+            f"{DOWNLOAD_FOLDER}voti.xlsx"  # Modifica il percorso e nome del file
+        )
+
+        try:
+            # Salviamo il file in modalità "wb" (write binary) per scrivere i dati in binario
+            with open(output_file_path, "wb") as file:
+                for chunk in get_response.iter_content(chunk_size=8192):
+                    if chunk:
+                        file.write(chunk)
+        except Exception as e:
+            logger.error(f"Errore durante il salvataggio del file: {e}")
+        logger.debug("Chiamata GET riuscita:")
+        return search_player_voto(day)
     else:
         logger.error(f"Errore nella chiamata GET: {get_response.status_code}")
         return False
