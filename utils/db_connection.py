@@ -16,7 +16,7 @@ from datetime import datetime
 from utils.logger import logger
 from settings import DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER
 
-# Leggi i dati del database dalle variabili d'ambiente
+from playhouse.migrate import *
 
 # Configura il database Peewee
 db = PostgresqlDatabase(
@@ -110,8 +110,23 @@ def initialize_database():
         db.create_tables([Squads], safe=True)
         db.create_tables([TeamSummary], safe=True)
         db.create_tables([InjuryPlayers], safe=True)
+
+        migrator = PostgresqlMigrator(db)
+        migration_add_possible_return_date_column_in_injuryplayers(migrator)
+
         logger.info("Database tables created.")
     except Exception as e:
         logger.error(f"An error occurred while initializing the database: {e}")
     finally:
         db.close()
+
+
+def migration_add_possible_return_date_column_in_injuryplayers(
+    migrator: PostgresqlMigrator,
+):
+    with db.atomic():  # Assicura che la migrazione sia fatta in una transazione
+        migrate(
+            migrator.add_column(
+                "injuryplayers", "possible_return_date", BigIntegerField(null=True)
+            )
+        )
