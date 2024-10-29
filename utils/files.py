@@ -2,6 +2,7 @@ import os
 from typing import List
 import pandas as pd
 from datetime import datetime
+from functions.seriea_function import get_possible_return_date_data
 from settings import DOWNLOAD_FOLDER, LEGA_FANTA
 from utils.db_connection import Squads, Player, Teams, InjuryPlayers
 from utils.logger import logger
@@ -91,6 +92,34 @@ def search_player_voto(match_day: int):
     df_players = df[df.iloc[:, 0].astype(str).str.isdigit()]
     print(len(df_players))
 
+    _get_healty_player_list(injuries_player, player_healty, df_players)
+    if not player_healty:
+        message = "Nessun giocatore ritornato dall'infortunio la scorsa giornata\n"
+        possible_player_healty = _get_possible_healty_player_list(injuries_player)
+        if possible_player_healty:
+            message = "Potrebbero tornati dall'infortunio i seguenti giocatori:\n"
+            message = extract_message_player(
+                match_day, possible_player_healty, message, True
+            )
+    else:
+        message = "Sono tornati dall'infortunio i seguenti giocatori:\n"
+        message = extract_message_player(match_day, player_healty, message, False)
+    return message
+
+
+def extract_message_player(match_day, player_healty, message: str, possible: bool):
+    for player in player_healty:
+        player_db: InjuryPlayers = InjuryPlayers.get_by_id(player["id"])
+        if possible:
+            player_db.possible_return_date = match_day + 1
+        else:
+            player_db.return_date = match_day
+        player_db.save()
+        message += f"{player['name']}\n"
+    return message
+
+
+def _get_healty_player_list(injuries_player, player_healty, df_players):
     for player in injuries_player:
         for index, row in df_players.iterrows():
             id_player = row.values[0]
@@ -102,16 +131,16 @@ def search_player_voto(match_day: int):
                         "name": name_player,
                     }
                 )
-    if not player_healty:
-        return "Nessun giocatore ritornato dall' infortunio"
-    else:
-        message = "Sono tornati dall'infortunio i seguenti giocatori:\n"
-        for player in player_healty:
-            player_db: InjuryPlayers = InjuryPlayers.get_by_id(player["id"])
-            player_db.return_date = match_day
-            player_db.save()
-            message += f"{player['name']}\n"
-        return message
+
+
+def _get_possible_healty_player_list(injuries_player):
+    possible_healty_list = get_possible_return_date_data()
+    possible_player_healty = []
+    for player in possible_healty_list:
+        for i_player in injuries_player:
+            if i_player["id"] == player["id"] and i_player["name"] == player["name"]:
+                possible_player_healty.append(i_player)
+    return possible_player_healty
 
 
 def manage_prices_file(match_day: int):

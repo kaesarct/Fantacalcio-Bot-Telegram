@@ -46,6 +46,7 @@ class InjuryPlayers(Model):
     id = BigIntegerField(unique=True)
     name = TextField()
     return_date = BigIntegerField(null=True)
+    possible_return_date = BigIntegerField(null=True)
 
     class Meta:
         database = db

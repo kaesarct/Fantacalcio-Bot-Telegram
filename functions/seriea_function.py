@@ -126,3 +126,37 @@ def add_player_into_injuries_db(player: Player):
     player_injuried = InjuryPlayers.get_or_none(id=player.player_id)
     if not player_injuried:
         InjuryPlayers.create(id=player.player_id, name=player.player_name)
+
+
+def get_possible_return_date_data() -> List[dict]:
+    # URL della pagina da analizzare
+    url = f"{BASE_URL}probabili-formazioni-serie-a"  # Sostituisci con il link della pagina
+
+    # Effettua la richiesta GET per ottenere il contenuto della pagina
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Trova tutti gli elementi con la classe "player-item pill"
+    player_items = soup.find_all("li", class_="player-item pill")
+
+    # Lista per salvare i dati estratti
+    players_data = []
+
+    # Estrazione dei dati
+    for item in player_items:
+        # Trova il tag <a> con la classe "player-name player-link"
+        player_link = item.find("a", class_="player-name player-link")
+
+        # Estrai il nome del giocatore dal tag <span> all'interno di <a>
+        player_name = player_link.find("span").text.strip()
+
+        # Estrai l'href e separa per ottenere il codice e il nome dalla URL
+        href = player_link["href"]
+        url_parts = href.strip("/").split("/")
+
+        # Ottieni il nome (penultimo elemento) e il codice (ultimo elemento) dalla URL
+        player_code = url_parts[-1]  # es: "6410"
+
+        # Aggiungi i dati alla lista
+        players_data.append({"name": player_name, "id": int(player_code)})
+    return players_data
