@@ -105,10 +105,7 @@ def initialize_database():
         db.connect()
         logger.info("Database connected.")
         db.create_tables([Message], safe=True)
-        db.create_tables([Teams], safe=True)
         db.create_tables([Player], safe=True)
-        db.create_tables([Squads], safe=True)
-        db.create_tables([TeamSummary], safe=True)
         db.create_tables([InjuryPlayers], safe=True)
 
         migrator = PostgresqlMigrator(db)

@@ -1,3 +1,4 @@
+import io
 import os
 from typing import List
 import pandas as pd
@@ -42,26 +43,6 @@ def rename_file(old_name: str, new_name: str) -> None:
 
     except Exception as e:
         logger.error(f"Errore inaspettato: {e}")
-
-
-def merge_csv_files(file_list: list, output_file: str) -> None:
-    """
-    Unisce più file CSV in un unico file CSV.
-
-    Args:
-        file_list (list): Lista dei percorsi dei file CSV da unire.
-        output_file (str): Percorso del file CSV di output unito.
-    """
-    try:
-        # Leggi e unisci tutti i file CSV
-        df_list = [pd.read_csv(file) for file in file_list]
-        merged_df = pd.concat(df_list, ignore_index=True)
-        # Salva il DataFrame unito in un nuovo file CSV
-        merged_df.to_csv(output_file, index=False)
-        logger.debug(f"File CSV uniti con successo in '{output_file}'.")
-
-    except Exception as e:
-        logger.error(f"Errore durante l'unione dei file CSV: {e}")
 
 
 def get_injuries_player():

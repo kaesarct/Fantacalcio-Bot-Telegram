@@ -10,14 +10,19 @@ from telegram.ext import (
 )
 from functions.scraping_function import (
     get_healty_player,
-    get_team_name,
-    get_team_summary,
     update_rose,
 )
-from settings import ADMIN_USER_ID, DOWNLOAD_FOLDER, FUNNY_COMMANDS, LOG_FOLDER, TOKEN, DEBUG_MODE
+from settings import (
+    ADMIN_USER_ID,
+    DOWNLOAD_FOLDER,
+    FUNNY_COMMANDS,
+    LOG_FOLDER,
+    TOKEN,
+    DEBUG_MODE,
+)
 from utils.files import check_folder_exists
 from utils.logger import logger
-from utils.db_connection import initialize_database, InjuryPlayers, Player
+from utils.db_connection import initialize_database, Player
 from functions.seriea_function import (
     add_injury_player,
     add_player_into_injuries_db,
@@ -185,23 +190,6 @@ async def handle_healty_player(update: Update, context: CallbackContext) -> None
         logger.error("Errore durante l'esecuzione del comando /healty_player: %s", e)
 
 
-async def handle_initialize_db(update: Update, context: CallbackContext) -> None:
-    try:
-        await update.message.reply_text(
-            f"Ci vorrà del tempo. Mettiti comodo e attendi il messaggio di avvenuto successo"
-        )
-        text = get_team_name()
-        if text == "error":
-            await update.message.reply_text(
-                "Errore durante il popolamento del database."
-            )
-        else:
-            await update.message.reply_text(f"Database popolato con successo: {text}")
-            logger.info("Database popolato con successo.")
-    except Exception as e:
-        logger.error("Errore durante l'esecuzione del comando /initialize_db: %s", e)
-
-
 async def handle_update_db(update: Update, context: CallbackContext) -> None:
     try:
         await update.message.reply_text(f"Attendi il messaggio di avvenuto successo")
@@ -229,33 +217,6 @@ async def handle_funny_command(update: Update, context: CallbackContext) -> None
         logger.warning(f"Comando '{command}' non trovato in funny.json.")
 
 
-async def handle_analyze_command(update: Update, context: CallbackContext) -> None:
-    try:
-        await update.message.reply_text(f"Attendi il messaggio di avvenuto successo")
-        messages = get_team_summary()  # Ottieni tutti i messaggi in una lista
-        max_length = 4096
-
-        current_message = ""  # Messaggio che accumula i team
-        for team_message in messages:
-            # Se aggiungere il prossimo team supera il limite, invia il messaggio corrente
-            if (
-                len(current_message) + len(team_message) + 1 > max_length
-            ):  # +1 per il newline
-                await update.message.reply_text(current_message)
-                current_message = ""  # Resetta il messaggio per il prossimo blocco
-
-            # Aggiungi il team al messaggio corrente
-            current_message += team_message + "\n"
-
-        # Invia l'ultimo blocco di messaggi, se presente
-        if current_message:
-            await update.message.reply_text(current_message)
-
-        logger.info("L'utente %s ha richiesto analyze.", update.message.from_user.id)
-    except Exception as e:
-        logger.error("Errore durante l'esecuzione del comando /analyze: %s", e)
-
-
 def main():
     initialize_database()  # Inizializza il database
 
@@ -267,11 +228,9 @@ def main():
 
     # Aggiungi i comandi
     app.add_handler(CommandHandler("nextmatch", handle_nextmatch))
-    app.add_handler(CommandHandler("analize", handle_analyze_command))
     app.add_handler(CommandHandler("recupero_infortuni", handle_healty_player))
     app.add_handler(CommandHandler("help", handle_help))
 
-    app.add_handler(CommandHandler("initialize_db", handle_initialize_db))
     app.add_handler(CommandHandler("update_db", handle_update_db))
 
     conv_handler = ConversationHandler(

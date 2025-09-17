@@ -2,10 +2,16 @@ from bs4 import BeautifulSoup
 import requests
 from utils.files import manage_prices_file, search_player_voto
 from utils.logger import logger
-from settings import BASE_API, BASE_URL, PASSWORD, USERNAME, DOWNLOAD_FOLDER
+from settings import (
+    BASE_API,
+    BASE_URL,
+    PASSWORD,
+    USERNAME,
+    DOWNLOAD_FOLDER,
+    YEAR_QUOTAZIONI,
+)
 
 URL_API = f"{BASE_URL}{BASE_API}"
-# Dati per il login
 
 
 def get_last_matchday():
@@ -42,7 +48,7 @@ def get_last_matchday():
 def get_prices():
 
     # URL per la chiamata GET (dopo il login)
-    url_get = f"{URL_API}Excel/prices/19/1"
+    url_get = f"{URL_API}Excel/prices/{YEAR_QUOTAZIONI}/1"
 
     session = login_in_fanta()
 
@@ -71,10 +77,11 @@ def get_prices():
         logger.error(f"Errore nella chiamata GET: {get_response.status_code}")
         return False
 
+
 def get_voti():
     day = get_last_matchday()
     # URL per la chiamata GET (dopo il login)
-    url_get = f"{URL_API}Excel/votes/19/{day}"
+    url_get = f"{URL_API}Excel/votes/{YEAR_QUOTAZIONI}/{day}"
 
     session = login_in_fanta()
 

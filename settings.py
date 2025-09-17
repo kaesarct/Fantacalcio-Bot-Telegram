@@ -7,13 +7,13 @@ DOWNLOAD_FOLDER = "./utils/files/"
 BASE_URL_LEGHE = "https://leghe.fantacalcio.it/"
 BASE_URL = "https://www.fantacalcio.it/"
 BASE_API = "api/v1/"
+YEAR_QUOTAZIONI = str(os.environ.get("YEAR_QUOTAZIONI", "20"))
 try:
     # Carica comandi dinamici da funny.json
     with open("./utils/funny.json", "r") as f:
         FUNNY_COMMANDS = json.load(f)
 except FileNotFoundError:
     FUNNY_COMMANDS = {}
-DEFAULT_TIMEOUT = 10
 TOKEN = os.environ.get("TOKEN", "")
 DEBUG_MODE = os.environ.get("DEBUG_MODE", False)
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "")

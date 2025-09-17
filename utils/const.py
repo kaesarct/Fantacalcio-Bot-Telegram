@@ -5,10 +5,10 @@ from enum import Enum
 class Team(Enum):
     COM = "Como"
     BOL = "Bologna"
-    EMP = "Empoli"
+    CRE = "Cremonese"
     JUV = "Juventus"
     MIL = "Milan"
-    VEN = "Venezia"
+    SAS = "Sassuolo"
     GEN = "Genoa"
     ROM = "Roma"
     ATA = "Atalanta"
@@ -17,12 +17,13 @@ class Team(Enum):
     LEC = "Lecce"
     CAG = "Cagliari"
     NAP = "Napoli"
-    MON = "Monza"
+    PIS = "Pisa"
     INT = "Inter"
     PAR = "Parma"
     UDI = "Udinese"
     LAZ = "Lazio"
     VER = "Verona"
+
 
 day_of_week_map = {
     "mon": "Lun",
