@@ -40,9 +40,6 @@ if DEBUG_MODE == "true":
 async def set_commands(application):
     commands = [
         BotCommand("nextmatch", "Mostra le prossime partite della Serie A"),
-        BotCommand(
-            "analize", "Mostra le variazioni di prezzo e di FVM di ogni squadra"
-        ),
         BotCommand("help", "Mostra i comandi disponibili"),
         BotCommand(
             "recupero_infortuni",
@@ -83,7 +80,6 @@ async def handle_help(update: Update, context: CallbackContext) -> None:
         help_text = (
             "Benvenuto! Ecco i comandi disponibili per l'utente:\n\n"
             "/nextmatch - Mostra le prossime partite della Serie A.\n"
-            "/analize - Mostra le variazioni di prezzo e di FVM di ogni squadra\n"
             "/recupero_infortuni - Mostra i giocatori infortunati che sono tornati convocati\n"
             "/help - Mostra questo messaggio di aiuto.\n\n"
         )
